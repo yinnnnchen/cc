@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace cc
 {
-    class Student
+    internal class Student
     {
-        public string StudentId { get; set; }
-        public string StudentName { get; set; }
+        public String StudentId { get; set; }
+        public String StudentName { get; set; }
         public override string ToString()
         {
             return $"{StudentId} {StudentName}";
