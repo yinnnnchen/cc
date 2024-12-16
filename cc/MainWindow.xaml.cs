@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using Microsoft.Win32;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -6,6 +9,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
@@ -19,6 +23,12 @@ namespace cc
         List<Student> students = new List<Student>();
         List<Course> courses = new List<Course>();
         List<Teacher> teachers = new List<Teacher>();
+        List<Record> records = new List<Record>();
+
+        Student selectedStudent = null;
+        Course selectedCourse = null;
+        Teacher selectedTeacher = null;
+        Record selectedRecord = null;
         public MainWindow()
         {
             InitializeComponent();
@@ -54,6 +64,112 @@ namespace cc
             teacher3.TeachingCourses.Add(new Course(teacher3) { CourseId = "C006", CourseName = "資料庫程式設計", CourseDescription = "本課程使用SQL Server資料庫和C#語言來設計資料庫應用程式", Type = "必修", Points = 6, OpeningClass = "五專資工三甲" });
             teacher3.TeachingCourses.Add(new Course(teacher3) { CourseId = "C007", CourseName = "智慧型系統應用", CourseDescription = "本課程完整而淺顯地介紹研習人工智慧技術、智慧型系統與相關機電資領域所需的專業基礎，並詳細探討各種新進的智慧型系統應用技術。", Type = "選修", Points = 3, OpeningClass = "四技控晶四甲, 四技控晶四乙" });
             teachers.AddRange(new Teacher[] { teacher1, teacher2, teacher3 });
+
+            foreach (Teacher teacher in teachers)
+            {
+                foreach (Course course in teacher.TeachingCourses)
+                {
+                    courses.Add(course);
+                }
+            }
+            lbCourse.ItemsSource = courses;
+        }
+
+        private void cmbStudent_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            selectedStudent = cmbStudent.SelectedItem as Student;
+            labelStatus.Content = $"選擇學生：{selectedStudent.StudentName}";
+        }
+
+        private void tvTeacher_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (tvTeacher.SelectedItem is Course)
+            {
+                selectedCourse = tvTeacher.SelectedItem as Course;
+                labelStatus.Content = $"選擇課程：{selectedCourse.CourseName}";
+            }
+            else if (tvTeacher.SelectedItem is Teacher)
+            {
+                selectedTeacher = tvTeacher.SelectedItem as Teacher;
+                labelStatus.Content = $"選擇教師：{selectedTeacher.TeacherName}";
+            }
+        }
+
+        private void lbCourse_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            selectedCourse = lbCourse.SelectedItem as Course;
+            labelStatus.Content = $"選擇課程：{selectedCourse.CourseName}";
+        }
+
+        private void btnAdd_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedStudent == null || selectedCourse == null)
+            {
+                MessageBox.Show("請選取學生或課程");
+                return;
+            }
+            else
+            {
+                Record newRecord = new Record
+                {
+                    SelectedStudent = selectedStudent,
+                    SelectedCourse = selectedCourse
+                };
+
+                foreach (Record r in records)
+                {
+                    if (r.Equals(newRecord))
+                    {
+                        MessageBox.Show("此學生已選取此課程");
+                        return;
+                    }
+                }
+                records.Add(newRecord);
+                lvRecord.ItemsSource = records;
+                lvRecord.Items.Refresh();
+            }
+        }
+
+        private void btnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedRecord == null)
+            {
+                MessageBox.Show("請選取紀錄");
+                return;
+            }
+            else
+            {
+                records.Remove(selectedRecord);
+                lvRecord.ItemsSource = records;
+                lvRecord.Items.Refresh();
+            }
+        }
+
+        private void lvRecord_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (lvRecord.SelectedItem is Record)
+            {
+                selectedRecord = lvRecord.SelectedItem as Record;
+                labelStatus.Content = $"選擇紀錄：{selectedRecord.SelectedStudent.StudentName} - {selectedRecord.SelectedCourse.CourseName}";
+            }
+        }
+
+        private void btnSave_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Json Files(*.json)|*.json|All Files(*.*)|*.*";
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+                string json = JsonSerializer.Serialize(records, options);
+                File.WriteAllText(saveFileDialog.FileName, json);
+                MessageBox.Show("資料已儲存");
+            }
         }
     }
 }
